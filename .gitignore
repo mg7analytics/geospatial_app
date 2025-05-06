@@ -1,0 +1,4 @@
+geoenv/
+.env/
+*.pyc
+__pycache__/
