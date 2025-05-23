@@ -6,8 +6,61 @@ from shapely.geometry import Polygon, MultiPolygon
 import io
 from openpyxl import Workbook
 
-# Streamlit app title (in both languages)
-st.title("Geospatial Data Preprocessing App")
+# Custom CSS for styling
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #F5F5F5;
+        font-family: 'Roboto', sans-serif;
+    }
+    .header {
+        background-color: #1976D2;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .header h1 {
+        margin: 0;
+        font-size: 28px;
+    }
+    .stProgress > div > div > div {
+        background-color: #2E7D32;
+        background: linear-gradient(to right, #2E7D32, #66BB6A);
+        border-radius: 5px;
+    }
+    .stButton>button {
+        background-color: #1976D2;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+    }
+    .stButton>button:hover {
+        background-color: #1565C0;
+        transform: scale(1.05);
+    }
+    .stFileUploader label {
+        color: #424242;
+        font-size: 16px;
+        font-weight: bold;
+    }
+    .expander {
+        border: 1px solid #B0BEC5;
+        border-radius: 5px;
+        padding: 10px;
+        margin-bottom: 20px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# Branded header
+st.markdown('<div class="header"><h1>Geospatial Data Preprocessing App</h1></div>', unsafe_allow_html=True)
 
 # Language selection
 language = st.selectbox("Choose language / Choisir la langue", ["English", "French"])
@@ -15,39 +68,69 @@ language = st.selectbox("Choose language / Choisir la langue", ["English", "Fren
 # Instructions in English and French
 instructions_en = """
 ### Instructions
-- **File Requirements**: Upload a file in KML, Excel (.xlsx), or GeoJSON format. The file must contain a column named `wkt_geom` with Polygon or MultiPolygon geometries in WKT format, and a column named `Plantation Code` for attribute analysis.
-- **Output Tabs in the Excel Report**:
-  - **all_data**: All loaded data (with count in parentheses).
-  - **geo_unique**: Unique geometries (with count).
-  - **geo_duplicates**: Duplicate geometries (with count).
-  - **attr_duplicates**: Duplicate Plantation Codes (with count).
-  - **attr_unique**: Unique Plantation Codes (with count).
-  - **num_point**: Polygons with fewer than 12 points (with count).
-  - **centroid**: Polygons whose centroids are outside their boundaries (with count).
-  - **ovlp15**: Polygons from geo_unique overlapping by more than 15%, including Plantation Code, area in hectares (3 decimals), overall overlap percentage (2 decimals), and overlap percentage of each polygon relative to the other (2 decimals) (with count).
-  - **valid**: Filtered data starting from geo_unique, excluding duplicate attributes and removing overlapping polygons (>15%) based on area. If two polygons have the same area, one is removed. Ensures no duplicates in geometries or attributes remain after all filters. Includes area_ha (3 decimals, 1 ha = 10,000 m²), longitude (8 decimals), and latitude (8 decimals) (with count).
+#### File Requirements
+- Upload a file in KML, Excel (.xlsx), or GeoJSON format.
+- The file must contain:
+  - A column named `wkt_geom` with Polygon or MultiPolygon geometries in WKT format.
+  - A column named `Plantation Code` for attribute analysis.
+
+#### Output Tabs in the Excel Report
+- **all_data**: All loaded data (with count in parentheses).
+- **geo_unique**: Unique geometries (with count).
+- **geo_duplicates**: Duplicate geometries (with count).
+- **attr_duplicates**: Duplicate Plantation Codes (with count).
+- **attr_unique**: Unique Plantation Codes (with count).
+- **num_point**: Polygons with fewer than 12 points (with count).
+- **centroid**: Polygons whose centroids are outside their boundaries (with count).
+- **ovlp15**: Polygons from `geo_unique` overlapping by more than 15%, including:
+  - Plantation Code.
+  - Area in hectares (3 decimals).
+  - Overall overlap percentage (2 decimals).
+  - Overlap percentage of each polygon relative to the other (2 decimals) (with count).
+- **valid**: Filtered data starting from `geo_unique`, with the following conditions:
+  - Excludes duplicate attributes.
+  - Removes overlapping polygons (>15%) based on area (if two polygons have the same area, one is removed).
+  - Ensures no duplicates in geometries or attributes remain after all filters.
+  - Includes:
+    - `area_ha` (3 decimals, 1 ha = 10,000 m²).
+    - `longitude` (8 decimals).
+    - `latitude` (8 decimals) (with count).
 """
 
 instructions_fr = """
 ### Instructions
-- **Exigences du fichier** : Téléchargez un fichier au format KML, Excel (.xlsx) ou GeoJSON. Le fichier doit contenir une colonne nommée `wkt_geom` avec des géométries de type Polygon ou MultiPolygon au format WKT, ainsi qu'une colonne nommée `Plantation Code` pour l'analyse des attributs.
-- **Onglets de sortie dans le rapport Excel** :
-  - **all_data** : Toutes les données chargées (avec le nombre entre parenthèses).
-  - **geo_unique** : Géométries uniques (avec le nombre).
-  - **geo_duplicates** : Géométries dupliquées (avec le nombre).
-  - **attr_duplicates** : Codes de plantation dupliqués (avec le nombre).
-  - **attr_unique** : Codes de plantation uniques (avec le nombre).
-  - **num_point** : Polygones avec moins de 12 points (avec le nombre).
-  - **centroid** : Polygones dont les centroïdes sont à l'extérieur de leurs limites (avec le nombre).
-  - **ovlp15** : Polygones de geo_unique qui se chevauchent à plus de 15 %, incluant le Code de plantation, la superficie en hectares (3 décimales), le pourcentage de chevauchement global (2 décimales), et le pourcentage de chevauchement de chaque polygone par rapport à l'autre (2 décimales) (avec le nombre).
-  - **valid** : Données filtrées à partir de geo_unique, excluant les attributs dupliqués et supprimant les polygones chevauchants (>15 %) en fonction de la superficie. Si deux polygones ont la même superficie, l'un est supprimé. Garantit qu'il n'y a pas de doublons dans les géométries ou les attributs après tous les filtres. Inclut area_ha (3 décimales, 1 ha = 10 000 m²), longitude (8 décimales), et latitude (8 décimales) (avec le nombre).
+#### Exigences du fichier
+- Téléchargez un fichier au format KML, Excel (.xlsx) ou GeoJSON.
+- Le fichier doit contenir :
+  - Une colonne nommée `wkt_geom` avec des géométries de type Polygon ou MultiPolygon au format WKT.
+  - Une colonne nommée `Plantation Code` pour l'analyse des attributs.
+
+#### Onglets de sortie dans le rapport Excel
+- **all_data** : Toutes les données chargées (avec le nombre entre parenthèses).
+- **geo_unique** : Géométries uniques (avec le nombre).
+- **geo_duplicates** : Géométries dupliquées (avec le nombre).
+- **attr_duplicates** : Codes de plantation dupliqués (avec le nombre).
+- **attr_unique** : Codes de plantation uniques (avec le nombre).
+- **num_point** : Polygones avec moins de 12 points (avec le nombre).
+- **centroid** : Polygones dont les centroïdes sont à l'extérieur de leurs limites (avec le nombre).
+- **ovlp15** : Polygones de `geo_unique` qui se chevauchent à plus de 15 %, incluant :
+  - Code de plantation.
+  - Superficie en hectares (3 décimales).
+  - Pourcentage de chevauchement global (2 décimales).
+  - Pourcentage de chevauchement de chaque polygone par rapport à l'autre (2 décimales) (avec le nombre).
+- **valid** : Données filtrées à partir de `geo_unique`, avec les conditions suivantes :
+  - Exclut les attributs dupliqués.
+  - Supprime les polygones chevauchants (>15 %) en fonction de la superficie (si deux polygones ont la même superficie, l'un est supprimé).
+  - Garantit qu'il n'y a pas de doublons dans les géométries ou les attributs après tous les filtres.
+  - Inclut :
+    - `area_ha` (3 décimales, 1 ha = 10 000 m²).
+    - `longitude` (8 décimales).
+    - `latitude` (8 décimales) (avec le nombre).
 """
 
-# Display instructions based on selected language
-if language == "English":
-    st.markdown(instructions_en)
-else:
-    st.markdown(instructions_fr)
+# Display collapsible instructions
+with st.expander("Show Instructions / Afficher les instructions", expanded=False):
+    st.markdown('<div class="expander">' + (instructions_en if language == "English" else instructions_fr) + '</div>', unsafe_allow_html=True)
 
 # File uploader for KML, Excel, or GeoJSON
 file_uploader_label = "Upload a file (KML, Excel, or GeoJSON)" if language == "English" else "Téléchargez un fichier (KML, Excel ou GeoJSON)"
