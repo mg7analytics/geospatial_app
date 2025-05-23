@@ -25,7 +25,7 @@ instructions_en = """
   - **num_point**: Polygons with fewer than 12 points (with count).
   - **centroid**: Polygons whose centroids are outside their boundaries (with count).
   - **ovlp15**: Polygons from geo_unique overlapping by more than 15%, including Plantation Code, area in hectares (3 decimals), overall overlap percentage (2 decimals), and overlap percentage of each polygon relative to the other (2 decimals) (with count).
-  - **valid**: Filtered data starting from geo_unique, excluding duplicate attributes, polygons with external centroids, and removing overlapping polygons (>15%) based on area. If two polygons have the same area, one is removed. Ensures no duplicates in geometries or attributes remain after all filters. Includes area_ha (3 decimals, 1 ha = 10,000 m²), longitude (8 decimals), and latitude (8 decimals) (with count).
+  - **valid**: Filtered data starting from geo_unique, excluding duplicate attributes and removing overlapping polygons (>15%) based on area. If two polygons have the same area, one is removed. Ensures no duplicates in geometries or attributes remain after all filters. Includes area_ha (3 decimals, 1 ha = 10,000 m²), longitude (8 decimals), and latitude (8 decimals) (with count).
 """
 
 instructions_fr = """
@@ -40,7 +40,7 @@ instructions_fr = """
   - **num_point** : Polygones avec moins de 12 points (avec le nombre).
   - **centroid** : Polygones dont les centroïdes sont à l'extérieur de leurs limites (avec le nombre).
   - **ovlp15** : Polygones de geo_unique qui se chevauchent à plus de 15 %, incluant le Code de plantation, la superficie en hectares (3 décimales), le pourcentage de chevauchement global (2 décimales), et le pourcentage de chevauchement de chaque polygone par rapport à l'autre (2 décimales) (avec le nombre).
-  - **valid** : Données filtrées à partir de geo_unique, excluant les attributs dupliqués, les polygones avec des centroïdes externes, et supprimant les polygones chevauchants (>15 %) en fonction de la superficie. Si deux polygones ont la même superficie, l'un est supprimé. Garantit qu'il n'y a pas de doublons dans les géométries ou les attributs après tous les filtres. Inclut area_ha (3 décimales, 1 ha = 10 000 m²), longitude (8 décimales), et latitude (8 décimales) (avec le nombre).
+  - **valid** : Données filtrées à partir de geo_unique, excluant les attributs dupliqués et supprimant les polygones chevauchants (>15 %) en fonction de la superficie. Si deux polygones ont la même superficie, l'un est supprimé. Garantit qu'il n'y a pas de doublons dans les géométries ou les attributs après tous les filtres. Inclut area_ha (3 décimales, 1 ha = 10 000 m²), longitude (8 décimales), et latitude (8 décimales) (avec le nombre).
 """
 
 # Display instructions based on selected language
@@ -196,10 +196,8 @@ if uploaded_file is not None:
     # Step 1: Remove duplicate attributes (Plantation Code)
     valid_gdf = valid_gdf.drop_duplicates(subset=['Plantation Code'], keep='first')
 
-    # Step 2: Remove polygons with centroids outside their boundaries
+    # Step 2: Compute centroids for longitude and latitude calculation (but do not filter)
     valid_gdf['centroid'] = valid_gdf['geometry'].centroid
-    valid_gdf['centroid_outside'] = ~valid_gdf.apply(lambda row: row['geometry'].contains(row['centroid']), axis=1)
-    valid_gdf = valid_gdf[~valid_gdf['centroid_outside']]
 
     # Step 3: Handle overlapping polygons (>15%) by removing based on area
     if not ovlp15.empty:
@@ -236,7 +234,7 @@ if uploaded_file is not None:
     valid_gdf['latitude'] = valid_gdf['centroid'].y.round(8)  # Latitude in WGS84 degrees
 
     # Drop unnecessary columns for the valid sheet, handling missing columns
-    columns_to_drop = ['geometry', 'centroid', 'centroid_outside']
+    columns_to_drop = ['geometry', 'centroid']
     valid = valid_gdf.drop(columns=[col for col in columns_to_drop if col in valid_gdf.columns])
     valid_count = len(valid)
 

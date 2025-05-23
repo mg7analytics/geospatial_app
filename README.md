@@ -14,7 +14,7 @@ This is a Streamlit-based application designed to preprocess geospatial data fro
   - `num_point (count)`: Geometries with fewer than 12 points.
   - `centroid (count)`: Geometries whose centroids are outside their boundaries.
   - `ovlp15 (count)`: Geometries from `geo_unique` overlapping by more than 15%, including Plantation Code, area in hectares (3 decimals), overall overlap percentage (2 decimals), and overlap percentage of each polygon relative to the other (2 decimals).
-  - `valid (count)`: Filtered data starting from `geo_unique`, excluding duplicate attributes, polygons with external centroids, and removing overlapping polygons (>15%) based on area (smaller area removed; if equal, one is removed). Ensures no duplicates in geometries or attributes remain. Includes `area_ha` (3 decimals, 1 ha = 10,000 m²), `longitude` (8 decimals), and `latitude` (8 decimals).
+  - `valid (count)`: Filtered data starting from `geo_unique`, excluding duplicate attributes and removing overlapping polygons (>15%) based on area (smaller area removed; if equal, one is removed). Ensures no duplicates in geometries or attributes remain after all filters. Includes `area_ha` (3 decimals, 1 ha = 10,000 m²), `longitude` (8 decimals), and `latitude` (8 decimals).
 - Includes a progress bar during analysis.
 - Offers language selection (English/French) for instructions and UI elements.
 - Provides a downloadable Excel report named `geospatial_report_<filename>.xlsx`.
@@ -65,6 +65,7 @@ This is a Streamlit-based application designed to preprocess geospatial data fro
 
 ## Notes
 - **Projection**: The app uses EPSG:3857 for area calculations to ensure consistency in overlap and area computations. For regional accuracy, consider using a local UTM zone if needed.
+- **Centroid Handling**: The `centroid` sheet identifies geometries with centroids outside their boundaries, but these geometries are not excluded from the `valid` sheet. They may still be removed if they have duplicate attributes or overlap issues.
 - **Overlap Removal**: In the `valid` sheet, overlapping polygons (>15%) are removed based on area comparison (smaller area is removed; if equal, the second polygon is removed arbitrarily).
 - **Performance**: Large datasets with many overlapping polygons may take longer to process due to pairwise intersection checks.
 

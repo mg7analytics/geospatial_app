@@ -2,3 +2,5 @@ geoenv/
 .env/
 *.pyc
 __pycache__/
+eudr_decimal.py
+data/
